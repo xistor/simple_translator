@@ -1,0 +1,31 @@
+{
+    "client":{
+
+    },
+
+    "server":{
+        "local_server": true,
+        "auto_start": true,
+        "use_engine": "baidu",
+
+        "engine":[
+            {
+                "name": "baidu",
+                "url": "http://api.fanyi.baidu.com/api/trans/vip/translate?",
+                "appid": "",
+                "secret_key": "",
+                "QPS" : 1
+            },
+    
+            {
+                "name": "youdao",
+                "url": "http://fanyi.youdao.com/translate?&doctype=json",
+                "appid": "",
+                "secret_key": "",
+                "QPS" : 10
+            }
+        ] 
+    }
+    
+   
+}

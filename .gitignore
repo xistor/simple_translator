@@ -1,0 +1,4 @@
+# ignore config
+*/config.json
+.vscode
+build
