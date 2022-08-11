@@ -10,6 +10,7 @@
 #include "nlohmann/json.hpp"
 #include <unistd.h>
 #include <thread>
+#include <chrono>
 
 #define BUFSIZE 4096
 
@@ -94,7 +95,7 @@ public:
 
 
     int start(){
-        // connect server
+
         if ((_sockt_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
             printf("\n Socket creation error \n");
@@ -113,11 +114,6 @@ public:
             return -1;
         }
 
-        if (connect(_sockt_fd, (struct sockaddr *)&_sock_addr, sizeof(_sock_addr)) < 0)
-        {
-            printf("\nConnection Failed \n");
-            return -1;
-        }
 
         // start query thread
         _query_thread = std::thread{&QueryWorker::run, this};
@@ -143,6 +139,21 @@ public:
 
     void run(){
         int readN;
+        int nRetry = 0;
+
+        std::cout << "\nConnecting ...";
+        while (connect(_sockt_fd, (struct sockaddr *)&_sock_addr, sizeof(_sock_addr)) < 0)
+        {
+            std::cout << " ..." << std::flush;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            nRetry++;
+            if(nRetry > 100){
+                std::cout <<"\n Connection failed" << std::endl;
+                _running = false;
+                return;
+            }
+        }
+
         while(_running) {
             std::cout << "take " << std::endl;
             auto q = _query_queue.take();

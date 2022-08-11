@@ -21,15 +21,18 @@ _url(url),
 _appid(appid),
 _secret_key(secret_key)
 {
-    _curl = curl_easy_init();
-    curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(_curl, CURLOPT_WRITEDATA, &_read_buffer);
+
+
 }
 
 std::string translator::send_request(const std::string &from, const std::string &to, const std::string &word) {
   
   CURLcode res;
-  _read_buffer = "";
+  std::string read_buffer;
+  read_buffer = "";
+  _curl = curl_easy_init();
+  curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+  curl_easy_setopt(_curl, CURLOPT_WRITEDATA, &read_buffer);
   if(_curl) {
 
     std::string req;
@@ -70,10 +73,10 @@ std::string translator::send_request(const std::string &from, const std::string 
               curl_easy_strerror(res));
  
     /* always cleanup */ 
-    // curl_easy_cleanup(_curl);
+    curl_easy_cleanup(_curl);
   }
 
-  return _read_buffer;
+  return read_buffer;
 }
 
 std::string translator::translate(const std::string &from, const std::string &to, const std::string &query_word) {

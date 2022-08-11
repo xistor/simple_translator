@@ -22,7 +22,7 @@ private:
     std::string _url;
     std::string _appid;
     std::string _secret_key;
-    std::string _read_buffer;
+
 
     translator(const translator& t) = delete;
     

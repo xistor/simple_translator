@@ -130,7 +130,7 @@ int main(int argc, char const* argv[])
         {
             // create new thread
             std::thread t(trans_thread, new_socket, &tr);
-            t.join();
+            t.detach();
         }
         else
         {
