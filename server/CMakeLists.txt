@@ -1,5 +1,5 @@
 
-add_executable(server ./server.cpp ./translator.cpp)
+add_executable(server ./server.cpp ./Translator.cpp)
 
 
 include_directories(${OPENSSL_INCLUDE_DIRS})

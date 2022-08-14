@@ -1,7 +1,7 @@
 #ifndef _QUERYWORKER_H_
 #define _QUERYWORKER_H_
 
-#include "blockingqueue.h"
+#include "BlockingQueue.h"
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <netinet/in.h>

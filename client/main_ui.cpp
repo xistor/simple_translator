@@ -18,9 +18,9 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <thread>
-#include "menubar.h"
+#include "MenuBar.h"
 #include "nlohmann/json.hpp"
-#include "queryworker.h"
+#include "QueryWorker.h"
 
 #define PORT 9010
 #define ADDR "127.0.0.1"

@@ -1,7 +1,7 @@
 #include <curl/curl.h>
 #include <string.h>
 #include <openssl/md5.h>
-#include "translator.h"
+#include "Translator.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>

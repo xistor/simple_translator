@@ -9,48 +9,20 @@
 #include <mutex>
 #include <thread>
 #include <fstream>
+#include <poll.h>
+#include <fcntl.h>
+#include <list>
 #include "nlohmann/json.hpp"
-#include "translator.h"
+#include "Translator.h"
 
 #define PORT 9010
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 100
 #define BUF_SIZE 4096
 
 unsigned int g_client_num = 0;
 std::mutex g_mut;
 
 
-void trans_thread(int socket_fd, xistor::translator *tr) {
-    char buffer[BUF_SIZE] = { 0 };
-    int readN = 0;
-
-    while(readN = read(socket_fd, buffer, 4096)) {
-
-        std::cout << " read " << readN << " char " << std::endl;
-        if(readN) {
-            buffer[readN] = '\0';
-            std::cout << "buffer " << buffer << std::endl;
-            nlohmann::json req;
-            try {
-                req = nlohmann::json::parse(buffer);
-            }
-            catch (std::exception& e)
-            {
-                // output exception information
-                std::cout << __FILE__ << " exception: " << e.what() << '\n';
-            }
-
-            std::cout << "req " << req.dump() << std::endl;
-            std::string res = tr->translate(req["from"], req["to"], req["words"]);
-
-            std::cout << "res " << res << std::endl;
-            send(socket_fd, res.c_str(), res.length(), 0);
-            sleep(1);   // for baidu api limit
-        }
-    }
-
-    close(socket_fd);
-}
 
 int main(int argc, char const* argv[])
 {
@@ -59,6 +31,11 @@ int main(int argc, char const* argv[])
     int opt = 1;
     int addrlen = sizeof(address);
     std::string config_path;
+    struct pollfd fds[MAX_CLIENTS + 1];
+    int    nfds = 1, current_size = 0;
+    char buffer[BUF_SIZE] = { 0 };
+    bool compress_array = false, close_conn = false;
+    int rc =0;
 
     if(argc < 2) {
         config_path = "config.json";
@@ -104,6 +81,10 @@ int main(int argc, char const* argv[])
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
   
+    // Set socket to be nonblocking.
+    opt = opt | O_NONBLOCK;
+    fcntl(server_fd, F_SETFL, opt);
+
     // Forcefully attaching socket to the port
     if (bind(server_fd, (struct sockaddr*)&address,
              sizeof(address))
@@ -116,29 +97,143 @@ int main(int argc, char const* argv[])
         exit(EXIT_FAILURE);
     }
 
-    while (true)
-    {
-        std::cout << " waiting accept " << std::endl;
-        if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0)
-        {
-            perror("accept");
-            exit(EXIT_FAILURE);
-        }
-        std::cout << " accepted " << std::endl;
+    memset(fds, 0 , sizeof(fds));
+    fds[0].fd = server_fd;
+    fds[0].events = POLLIN;
 
-        if (g_client_num < MAX_CLIENTS)
+    while(true) {
+        std::cout << " waiting on poll() ... " << std::endl;
+        rc = poll(fds, nfds, -1);
+
+        if (rc < 0)
         {
-            // create new thread
-            std::thread t(trans_thread, new_socket, &tr);
-            t.detach();
+            perror("  poll() failed");
+            break;
         }
-        else
+
+        current_size = nfds;
+
+        for (int i = 0; i < current_size; i++)
         {
-            perror("too many cliens");
+            // check if there are event
+            if(fds[i].revents == 0)
+                continue;
+
+            if(fds[i].revents != POLLIN)
+            {
+                printf("  Error! revents = %d\n", fds[i].revents);
+                break;
+
+            }
+
+            if (fds[i].fd == server_fd)
+            {
+
+                do
+                {
+
+                    new_socket = accept(server_fd, NULL, NULL);
+                    if (new_socket < 0)
+                    {
+                        if (errno != EWOULDBLOCK)
+                        {
+                        perror("  accept() failed");
+                        }
+                        break;
+                    }
+
+                    if(fcntl(new_socket, F_SETFL, fcntl(new_socket, F_GETFL) | O_NONBLOCK) < 0) {
+                        perror(" set O_NONBLOCK failed\n");
+                    }
+
+                    printf("  New incoming connection - %d\n", new_socket);
+                    fds[nfds].fd = new_socket;
+                    fds[nfds].events = POLLIN;
+                    nfds++;
+
+                } while (new_socket != -1);
+            } else
+            {
+                printf("  Descriptor %d is readable\n", fds[i].fd);
+                close_conn = false;
+
+                do
+                {
+
+                    rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                    if (rc < 0)
+                    {
+                        if (errno != EWOULDBLOCK)
+                        {
+                        perror("  recv() failed");
+                        close_conn = true;
+                        }
+                        break;
+                    }
+
+
+                    if (rc == 0)
+                    {
+                        printf("  Connection closed\n");
+                        close_conn = true;
+                        break;
+                    }
+
+                    int len = rc;
+                    printf("  %d bytes received\n", len);
+
+                    // translate and send back
+                    buffer[len] = '\0';
+                    std::cout << "buffer " << buffer << std::endl;
+                    nlohmann::json req;
+                    try {
+                        req = nlohmann::json::parse(buffer);
+                    }
+                    catch (std::exception& e)
+                    {
+                        // output exception information
+                        std::cout << __FILE__ << " exception: " << e.what() << '\n';
+                    }
+
+                    std::cout << "req " << req.dump() << std::endl;
+                    std::string res = tr.translate(req["from"], req["to"], req["words"]);
+
+                    std::cout << "res " << res << std::endl;
+                    send(fds[i].fd, res.c_str(), res.length(), 0);
+                    sleep(1);   // for baidu api limit
+
+                } while(rc);
+
+                if (close_conn)
+                {
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    compress_array = true;
+                }
+
+
+            }
+        }
+
+        if (compress_array)
+        {
+            compress_array = false;
+            for (int i = 0; i < nfds; i++)
+            {
+                if (fds[i].fd == -1)
+                {
+                    for(int j = i; j < nfds-1; j++)
+                    {
+                        fds[j].fd = fds[j+1].fd;
+                    }
+                    i--;
+                    nfds--;
+                }
+            }
         }
 
     }
-    
+
 
   // closing the connected socket
     close(new_socket);
