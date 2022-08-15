@@ -2,4 +2,4 @@
 
 
 install(FILES  config.json DESTINATION translator)
-install(FILES  fonts/SourceHanSans-VF.ttf.ttc DESTINATION translator)
+install(DIRECTORY  fonts/ DESTINATION translator)

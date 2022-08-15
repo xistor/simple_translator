@@ -21,6 +21,8 @@
 #include "MenuBar.h"
 #include "nlohmann/json.hpp"
 #include "QueryWorker.h"
+#include "ImGuiFileDialog.h"
+
 
 #define PORT 9010
 #define ADDR "127.0.0.1"
@@ -73,7 +75,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    SDL_Window* window = SDL_CreateWindow("translator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("translator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 480, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -88,8 +90,8 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsClassic();
+    // Setup style
+    xistor::StyleColorsDark2();
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
@@ -103,8 +105,10 @@ int main(int, char**)
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     io.Fonts->AddFontDefault();
-    ImFont* Roboto_Medium_font = io.Fonts->AddFontFromFileTTF("SourceHanSans-VF.ttf.ttc", 16.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
-
+    ImFont* Roboto_Medium_font = io.Fonts->AddFontFromFileTTF("OPPOSans-B-2.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+    // io.Fonts->AddFontFromFileTTF("OPPOSans-B-2.ttf", 14.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+    // io.Fonts->AddFontFromFileTTF("ShipporiAntique-Regular-2.ttf", 14.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+    // io.Fonts->AddFontFromFileTTF("SourceHanSansSC-Regular-2.otf", 14.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
 
     io.FontDefault = Roboto_Medium_font;
     io.FontGlobalScale = 2;
@@ -154,13 +158,12 @@ int main(int, char**)
 
 
 
-
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
 
             ImGui::Begin("translate", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar);                          // Create a window called "Hello, world!" and append into it.
 
-            ShowMainMenuBar();
+            xistor::ShowMainMenuBar();
 
             std::string from, to, pre, words;
             // Child 1: no border
@@ -178,7 +181,6 @@ int main(int, char**)
                 ImGui::Combo(" ", &src_item, source_languages, IM_ARRAYSIZE(source_languages));
                 if(ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 8), flags))
                 {
-                    std::cout << "InputTextMultiline enter" << std::endl;
                     from = source_languages[src_item];
                     char* s = text;
                     Strtrim(s);
