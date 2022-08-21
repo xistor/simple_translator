@@ -9,14 +9,14 @@
 
 using namespace xistor;
 
-size_t translator::WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t Translator::WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
 
-translator::translator(std::string url, std::string appid, std::string secret_key):
+Translator::Translator(std::string url, std::string appid, std::string secret_key):
 _url(url),
 _appid(appid),
 _secret_key(secret_key)
@@ -25,7 +25,7 @@ _secret_key(secret_key)
 
 }
 
-std::string translator::send_request(const std::string &from, const std::string &to, const std::string &word) {
+std::string Translator::send_request(const std::string &from, const std::string &to, const std::string &word) {
   
   CURLcode res;
   std::string read_buffer;
@@ -79,7 +79,7 @@ std::string translator::send_request(const std::string &from, const std::string 
   return read_buffer;
 }
 
-std::string translator::translate(const std::string &from, const std::string &to, const std::string &query_word) {
+std::string Translator::translate(const std::string &from, const std::string &to, const std::string &query_word) {
 
   return send_request(from, to, query_word);
 }
